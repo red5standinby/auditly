@@ -9,8 +9,8 @@ const nextConfig: NextConfig = {
   // C:\Users\Jaime\ as the workspace root, creating two React instances.
   turbopack: {
     resolveAlias: {
-      react: "./node_modules/react",
-      "react-dom": "./node_modules/react-dom",
+      react: { browser: "./node_modules/react" },
+      "react-dom": { browser: "./node_modules/react-dom" },
     },
   },
 

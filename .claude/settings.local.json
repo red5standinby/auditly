@@ -18,7 +18,11 @@
       "Bash(powershell -Command \"Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue; Write-Host ''Cache cleared''\")",
       "Bash(powershell -Command \"Get-ChildItem -Recurse -Exclude node_modules,.next -Include *.ts,*.tsx,*.js,*.jsx,*.mjs | Where-Object { $_FullName -notmatch ''node_modules|\\\\.next'' } | Select-Object -ExpandProperty FullName | Sort-Object\")",
       "Bash(npm run:*)",
-      "Bash(gh auth:*)"
+      "Bash(gh auth:*)",
+      "Bash(cat next.config.ts)",
+      "Bash(cat next.config.js)",
+      "Bash(cat next.config.mjs)",
+      "Bash(node -e ':*)"
     ]
   }
 }

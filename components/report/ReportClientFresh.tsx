@@ -58,7 +58,7 @@ const KNOWN_DOMAINS: Record<string, string> = {
   // Finance
   "stripe.com": "finance", "paypal.com": "finance", "venmo.com": "finance",
   "chase.com": "finance", "wellsfargo.com": "finance", "bankofamerica.com": "finance",
-  "robinhood.com": "finance", "coinbase.com": "crypto", "fidelity.com": "finance",
+  "robinhood.com": "finance", "fidelity.com": "finance",
   "schwab.com": "finance", "vanguard.com": "finance", "nerdwallet.com": "finance",
   // Tech / SaaS
   "apple.com": "tech", "google.com": "tech", "microsoft.com": "tech",
