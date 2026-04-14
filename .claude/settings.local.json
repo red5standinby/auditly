@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(where npm:*)",
+      "Bash(\"/c/Program Files/nodejs/npm.cmd\" install)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(\"/c/Program Files/nodejs/npm.cmd\" audit)",
+      "Bash(\"/c/Program Files/nodejs/npm.cmd\" run build)",
+      "Bash(dir /s /b)",
+      "Bash(findstr -v node_modules)",
+      "Bash(findstr -v .next)",
+      "Bash(node -e \"const r=require\\(''./node_modules/react/package.json''\\); console.log\\(''react:'', r.version\\)\")",
+      "Bash(node -e \"const n=require\\(''./node_modules/next/package.json''\\); console.log\\(''next:'', n.version\\)\")",
+      "Bash(node -e \"console.log\\(''react:'', require\\(''./node_modules/react/package.json''\\).version\\)\")",
+      "Bash(cd:*)",
+      "Bash(rd /s /q .next)",
+      "Bash(powershell -Command \"Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue; Write-Host ''Cache cleared''\")",
+      "Bash(powershell -Command \"Get-ChildItem -Recurse -Exclude node_modules,.next -Include *.ts,*.tsx,*.js,*.jsx,*.mjs | Where-Object { $_FullName -notmatch ''node_modules|\\\\.next'' } | Select-Object -ExpandProperty FullName | Sort-Object\")",
+      "Bash(npm run:*)"
+    ]
+  }
+}
