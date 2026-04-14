@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import ReportClientFresh from "@/components/report/ReportClientFresh";
 
 type ReportPageProps = {
@@ -10,5 +11,9 @@ export default async function Page({ searchParams }: ReportPageProps) {
   const params = await searchParams;
   const url = params?.url ?? "";
 
-  return <ReportClientFresh url={url} />;
+  return (
+    <Suspense>
+      <ReportClientFresh url={url} />
+    </Suspense>
+  );
 }

@@ -466,6 +466,103 @@ function getComparableSites(auditUrl: string): Industry {
   return inferIndustryFromUrl(auditUrl);
 }
 
+// ─── Conclusion generator ─────────────────────────────────────────────────────
+
+type FlagStatus = "pass" | "warn" | "fail";
+
+type Flag = {
+  text: string;
+  status: FlagStatus;
+};
+
+type ConclusionResult = {
+  flags: Flag[];
+  nextStep: string;
+};
+
+function generateConclusion(data: AuditData): ConclusionResult {
+  const flags: Flag[] = [];
+
+  // Title
+  if (data.title) {
+    flags.push({ status: "pass", text: "Page title is present — a solid foundation for search engine visibility." });
+  } else {
+    flags.push({ status: "fail", text: "No page title found — a critical SEO gap that should be addressed immediately." });
+  }
+
+  // Meta description
+  if (data.metaDescription) {
+    flags.push({ status: "pass", text: "Meta description is in place, giving search engines a clear summary to display." });
+  } else {
+    flags.push({ status: "fail", text: "No meta description detected — search snippets will be auto-generated, reducing click-through rates." });
+  }
+
+  // H1
+  const h1 = data.h1Count ?? 0;
+  if (h1 === 1) {
+    flags.push({ status: "pass", text: "Heading structure is clean — a single H1 signals strong topical focus to crawlers." });
+  } else if (h1 === 0) {
+    flags.push({ status: "fail", text: "No H1 heading detected — pages need a primary heading for both SEO and accessibility." });
+  } else {
+    flags.push({ status: "warn", text: `${h1} H1 tags found — a page should have exactly one to avoid diluting its ranking signal.` });
+  }
+
+  // Viewport
+  if (data.viewportExists) {
+    flags.push({ status: "pass", text: "Viewport meta tag is present, ensuring the page responds correctly on mobile devices." });
+  } else {
+    flags.push({ status: "fail", text: "Missing viewport meta tag — the page may render poorly on phones and tablets." });
+  }
+
+  // Images / alt text
+  const missing = data.missingAltCount ?? 0;
+  const total = data.imageCount ?? 0;
+  if (total > 0 && missing === 0) {
+    flags.push({ status: "pass", text: "All images carry alt text — accessibility and image-search signals are in good shape." });
+  } else if (missing > 0) {
+    flags.push({
+      status: "fail",
+      text: `${missing} image${missing === 1 ? "" : "s"} ${missing === 1 ? "is" : "are"} missing alt text — a straightforward fix that improves both accessibility and SEO.`,
+    });
+  }
+
+  // Word count — three-tier so the dot colour matches the grade the scorer would assign
+  const wc = data.wordCount ?? 0;
+  if (wc >= 600) {
+    flags.push({ status: "pass", text: "Content depth is strong — enough copy for search engines to index this page meaningfully." });
+  } else if (wc >= 300) {
+    flags.push({ status: "warn", text: `Content depth is limited (${wc} words) — expanding toward 600+ words would strengthen topical authority and rankings.` });
+  } else if (wc > 0) {
+    flags.push({ status: "fail", text: `Content is thin (${wc} words) — aim for at least 300 words to establish basic search visibility.` });
+  } else {
+    flags.push({ status: "fail", text: "No body copy detected — substantive written content is essential for search visibility." });
+  }
+
+  // Prioritised next step
+  let nextStep: string;
+  if (!data.title) {
+    nextStep = "Write a concise, keyword-rich page title — it's the single highest-leverage SEO change available right now.";
+  } else if (!data.metaDescription) {
+    nextStep = "Craft a compelling meta description (under 160 characters) to improve click-through rates from search results.";
+  } else if (h1 !== 1) {
+    nextStep = h1 === 0
+      ? "Add a single H1 heading that clearly describes the page's primary topic."
+      : "Reduce H1 usage to exactly one per page — move secondary headings to H2 or H3.";
+  } else if (missing > 0) {
+    nextStep = "Add descriptive alt text to every image — a quick win for accessibility compliance and image SEO.";
+  } else if (!data.viewportExists) {
+    nextStep = "Add a viewport meta tag to fix mobile rendering across all devices.";
+  } else if (wc < 600) {
+    nextStep = wc < 300
+      ? "Expand page copy to at least 300 focused words — this is the content floor for meaningful search visibility."
+      : "Continue building content depth past 600 words to move from a C-range score toward an A on content quality.";
+  } else {
+    nextStep = "Core on-page signals are healthy. Focus next on building quality inbound links and improving page load speed.";
+  }
+
+  return { flags, nextStep };
+}
+
 // ─── Grade colour mapping ─────────────────────────────────────────────────────
 
 function gradeColor(grade: string): string {
@@ -791,8 +888,19 @@ export default function ReportClientFresh({ url: urlProp }: { url?: string } = {
           <p className="text-[10px] uppercase tracking-[0.35em] font-medium text-blue-500/70">
             Audit Report
           </p>
-          <h1 className="text-4xl font-black tracking-tight leading-tight md:text-5xl">
-            Website Analysis
+          <h1
+            className="text-4xl tracking-tight leading-tight md:text-5xl"
+            style={{ fontWeight: 300 }}
+          >
+            {data?.title ? (
+              <>
+                <span style={{ fontWeight: 600 }}>{data.title}</span>
+                {" "}
+                <span className="text-neutral-400">Analysis</span>
+              </>
+            ) : (
+              "Website Analysis"
+            )}
           </h1>
           <p className="max-w-xl text-sm leading-7 text-neutral-500">
             Performance snapshot based on SEO, accessibility, content quality, and mobile
@@ -992,6 +1100,106 @@ export default function ReportClientFresh({ url: urlProp }: { url?: string } = {
           </section>
         )}
 
+        {/* ── Flags ───────────────────────────────────────────────────────── */}
+        {!loading && data && !data.error && (
+          <section>
+            <div
+              className="rounded-3xl p-8 space-y-6"
+              style={{
+                background: "linear-gradient(135deg, #0d0e11 0%, #0a0b0d 100%)",
+                border: "1px solid rgba(255,255,255,0.07)",
+                boxShadow: "0 0 60px rgba(59,130,246,0.03)",
+              }}
+            >
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.3em] font-medium text-blue-500/70">
+                  Conclusion
+                </p>
+                <h2
+                  className="mt-1 text-2xl tracking-tight text-white"
+                  style={{ fontWeight: 300 }}
+                >
+                  Summary &amp; Next Steps
+                </h2>
+              </div>
+
+              {(() => {
+                const conclusion = generateConclusion(data);
+                const passing = conclusion.flags.filter((f) => f.status === "pass");
+                const warning = conclusion.flags.filter((f) => f.status === "warn");
+                const failing = conclusion.flags.filter((f) => f.status === "fail");
+
+                return (
+                  <div className="space-y-6">
+                    {passing.length > 0 && (
+                      <div className="space-y-3">
+                        <p className="text-[11px] uppercase tracking-[0.22em] font-semibold text-green-500/60">
+                          What&apos;s working
+                        </p>
+                        <ul className="space-y-2.5">
+                          {passing.map((f, i) => (
+                            <li key={i} className="flex items-start gap-3 text-sm leading-relaxed text-neutral-400">
+                              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: "rgba(34,197,94,0.75)" }} />
+                              {f.text}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {warning.length > 0 && (
+                      <div className="space-y-3">
+                        <p className="text-[11px] uppercase tracking-[0.22em] font-semibold text-yellow-500/60">
+                          Flags
+                        </p>
+                        <ul className="space-y-2.5">
+                          {warning.map((f, i) => (
+                            <li key={i} className="flex items-start gap-3 text-sm leading-relaxed text-neutral-400">
+                              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: "rgba(234,179,8,0.75)" }} />
+                              {f.text}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {failing.length > 0 && (
+                      <div className="space-y-3">
+                        <p className="text-[11px] uppercase tracking-[0.22em] font-semibold text-red-400/60">
+                          Areas to improve
+                        </p>
+                        <ul className="space-y-2.5">
+                          {failing.map((f, i) => (
+                            <li key={i} className="flex items-start gap-3 text-sm leading-relaxed text-neutral-400">
+                              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: "rgba(239,68,68,0.75)" }} />
+                              {f.text}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    <div
+                      className="rounded-2xl px-5 py-4"
+                      style={{
+                        background: "rgba(59,130,246,0.05)",
+                        border: "1px solid rgba(59,130,246,0.15)",
+                      }}
+                    >
+                      <p className="mb-1.5 text-[11px] uppercase tracking-[0.22em] font-semibold text-blue-400/60">
+                        Recommended next step
+                      </p>
+                      <p className="text-sm leading-relaxed text-blue-200/70">
+                        {conclusion.nextStep}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </section>
+        )}
+
         {/* ── Comparable Sites ────────────────────────────────────────────── */}
         {/* FIX: industry is derived from `url` (the submitted audit URL),   */}
         {/* not from window.location, router.pathname, or any hardcoded list. */}
@@ -1004,7 +1212,7 @@ export default function ReportClientFresh({ url: urlProp }: { url?: string } = {
 
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-3">
-                <h2 className="text-lg font-bold tracking-tight text-white">
+                <h2 className="text-lg font-light tracking-tight text-white">
                   Reference Sites
                 </h2>
                 {/* industry badge — confirms which category was inferred */}
